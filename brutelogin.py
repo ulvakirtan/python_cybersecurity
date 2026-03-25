@@ -17,4 +17,4 @@ for password in passwords:
         print(f"[SUCCESS] Password found: {password}")
         break
     else:
-        print(f"[FAILED] {password}")m
+        print(f"[FAILED] {password}")
