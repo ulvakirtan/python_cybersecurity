@@ -1,7 +1,11 @@
 import socket
 import threading
+import time
 
 target = input("Enter target: ")
+start = int(input("Enter start port: "))
+end = int(input("Enter end port: "))
+
 print(f"\nScanning {target}...\n")
 
 services = {
@@ -17,6 +21,11 @@ services = {
     443: "HTTPS"
 }
 
+lock = threading.Lock()
+
+# Clear file
+open("results.txt", "w").close()
+
 def scan_port(port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(1)
@@ -25,38 +34,59 @@ def scan_port(port):
 
     if result == 0:
         service = services.get(port, "Unknown")
+        output = f"[OPEN] {port} → {service}"
 
         try:
             if port in [80, 8080]:
                 s.send(f"GET / HTTP/1.1\r\nHost: {target}\r\n\r\n".encode())
 
-            banner = s.recv(1024)
-            response = banner.decode(errors='ignore')
+            # 🔥 Proper receive loop
+            data = b""
+            while True:
+                try:
+                    chunk = s.recv(1024)
+                    if not chunk:
+                        break
+                    data += chunk
+                except:
+                    break
 
-            output = f"[OPEN] {port} → {service}"
+            response = data.decode(errors='ignore')
 
-            # Extract HTTP info
             if "HTTP" in response:
-                first_line = response.split("\n")[0]
-                output += f" | {first_line}"
+                lines = response.split("\r\n")
 
-                for line in response.split("\n"):
-                    if "Location:" in line:
-                        output += f" | {line.strip()}"
+                if len(lines) > 0:
+                    output += f" | {lines[0]}"
 
-            print(output)
+                for line in lines:
+                    if line.startswith("Location:"):
+                        output += f" | {line}"
 
         except:
-            print(f"[OPEN] {port} → {service} | No banner")
+            output += " | No banner"
+
+        print(output)
+
+        # 🔥 FIXED encoding
+        with lock:
+            with open("results.txt", "a", encoding="utf-8") as f:
+                f.write(output + "\n")
 
     s.close()
 
+start_time = time.time()
+
 threads = []
 
-for port in range(20, 101):
+for port in range(start, end + 1):
     t = threading.Thread(target=scan_port, args=(port,))
     threads.append(t)
     t.start()
 
 for t in threads:
     t.join()
+
+end_time = time.time()
+
+print(f"\nScan completed in {end_time - start_time:.2f} seconds")
