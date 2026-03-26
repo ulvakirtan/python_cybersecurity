@@ -1,0 +1,7 @@
+admin
+login
+dashboard
+secret
+backup
+test
+api

@@ -15,8 +15,20 @@ login_page = """
 </form>
 <p>{{ message }}</p>
 """
-attempts = {}
 
+@app.route("/admin")
+def admin():
+    return "Admin Panel"
+
+@app.route("/dashboard")
+def dashboard():
+    return "User Dashboard"
+
+@app.route("/secret")
+def secret():
+    return "Top Secret Data"
+
+attempts = {}
 @app.route("/", methods=["GET", "POST"])
 def login():
     global attempts
