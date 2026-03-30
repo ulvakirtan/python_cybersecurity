@@ -28,6 +28,26 @@ def dashboard():
 def secret():
     return "Top Secret Data"
 
+@app.route("/login", methods=["GET", "POST"])
+def login2():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        # 🔥 Vulnerability: weak auth logic
+        if "admin" in username:
+            return "Welcome admin"
+
+        return "Invalid login"
+
+    return """
+    <form method="POST">
+        Username: <input name="username"><br>
+        Password: <input name="password"><br>
+        <input type="submit">
+    </form>
+    """
+
 attempts = {}
 @app.route("/", methods=["GET", "POST"])
 def login():
