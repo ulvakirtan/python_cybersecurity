@@ -48,6 +48,26 @@ def login2():
     </form>
     """
 
+@app.route("/login2", methods=["GET", "POST"])
+def login_sql():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        # 🔥 Simulated SQL Injection vulnerability
+        if username == "' OR '1'='1" or password == "' OR '1'='1":
+            return "Logged in via SQL Injection!"
+
+        return "Invalid login"
+
+    return """
+    <form method="POST">
+        Username: <input name="username"><br>
+        Password: <input name="password"><br>
+        <input type="submit">
+    </form>
+    """
+
 attempts = {}
 @app.route("/", methods=["GET", "POST"])
 def login():

